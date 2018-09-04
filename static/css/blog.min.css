@@ -14,7 +14,7 @@ header, footer {
     width: 100%;
 }
 
-footer #container {
+footer #container #logo, #rights {
     margin: auto;
 }
 
