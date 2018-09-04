@@ -12,6 +12,7 @@ body {
 
 header, footer {
     width: 100%;
+    background-color: aqua;
 }
 
 footer #container #logo, #rights {
