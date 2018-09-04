@@ -5,9 +5,13 @@
 
 body {
     height: 1vh;
-    width: 1vw;
+    width: 100%;
     margin: 0;
     padding: 0;
+}
+
+header, footer {
+    width: 100%;
 }
 
 .size-10 {
