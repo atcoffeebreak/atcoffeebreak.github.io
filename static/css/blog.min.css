@@ -16,7 +16,7 @@ header, footer {
     color: white;
 }
 
-footer #container #logo, #rights {
+footer #container {
     margin: auto;
 }
 
