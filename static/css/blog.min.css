@@ -4,24 +4,35 @@
 }
 
 body {
-    height: 1vh;
-    width: 100%;
+    position: absolute;
     margin: 0;
     padding: 0;
+    height: 100%;
+    width: 100%;
 }
 
 header, footer {
+    display: block;
+    height: 50px;
     width: 100%;
     background-color: black;
     color: white;
 }
 
-footer #container {
-    margin: auto;
+main {
+    min-height: calc(100% - 100px);
+}
+
+footer div#container {
+    text-align: center;
 }
 
 .size-10 {
     font-size: 10pt;
+}
+
+.size-12 {
+    font-size: 12pt;
 }
 
 .size-16 {
@@ -37,4 +48,7 @@ footer #container {
     font-weight: 400;
 }
 
-#logo .red{color: red}
+#logo .red {
+    color: red;
+    font-weight: 400;
+}
