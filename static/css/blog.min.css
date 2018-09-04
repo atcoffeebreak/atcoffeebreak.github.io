@@ -1,1 +1,17 @@
-*{font-family:'Google Sans','Roboto',Arial,Helvetica,sans-serif;font-weight: 100;} #logo .red{color: red}
+* { 
+    font-family: 'Roboto', Arial, Helvetica, sans-serif; 
+    font-weight: 100; 
+}
+
+body {
+    height: 1vh;
+    width: 1vw;
+}
+
+#logo {
+    font-family: 'Google Sans', 'Roboto', Arial, Helvetica, sans-serif; 
+    font-weight: 300;
+    font-size: 18pt;
+}
+
+#logo .red{color: red}
