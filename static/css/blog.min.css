@@ -23,6 +23,12 @@ main {
     min-height: calc(100% - 100px);
 }
 
+main div#container {
+    display: block;
+    width: 90%;
+    text-align: justify; 
+}
+
 footer div#container {
     text-align: center;
 }
