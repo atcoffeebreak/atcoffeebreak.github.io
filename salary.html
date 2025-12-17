@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salary Calculator (PL) - Custom Formulas</title>
+    <style>
+        /* --- GLOBAL STYLES --- */
+        :root {
+            --primary-color: #0056b3;
+            --secondary-color: #28a745;
+            --deduction-color: #dc3545;
+            --bg-light: #f7f9fc;
+            --border-color: #e0e0e0;
+            --font-color: #333;
+            --input-bg: #ffffff;
+            --header-bg: #f0f4f8;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            line-height: 1.6; 
+            padding: 30px; 
+            background-color: var(--bg-light); 
+            color: var(--font-color);
+        }
+        
+        /* --- CONTAINER & LAYOUT ADJUSTMENT (FLEX: 2.5 vs 2) --- */
+        .calculator-container { 
+            display: flex; 
+            gap: 30px;
+            max-width: 1400px; 
+            margin: auto; 
+            min-height: 80vh; 
+        }
+        
+        .main-content { 
+            flex: 2.5; 
+            background: var(--input-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+        }
+        
+        .sidebar { 
+            flex: 2; 
+            padding: 30px 20px;
+            background: #fcfdfe;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            height: fit-content;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+
+        /* --- COLLAPSIBLE SECTIONS (Earnings & Deductions) --- */
+        .collapsible-container {
+            margin-bottom: 25px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        /* Main Headers (EARNINGS/DEDUCTIONS) */
+        .main-total-header {
+            background-color: var(--header-bg);
+            padding: 15px 20px;
+            font-weight: bold;
+            font-size: 1.3em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--primary-color);
+        }
+        .main-total-header.deductions-header {
+            border-bottom-color: var(--deduction-color);
+        }
+
+        /* Sub-Group Toggle */
+        .sub-group-toggle {
+            display: flex;
+            justify-content: flex-start; 
+            align-items: center;
+            padding: 10px 20px;
+            background-color: #fcfcfc;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        .sub-group-toggle:hover {
+            background-color: #f0f0f0;
+        }
+        .sub-group-toggle.deductions {
+            color: var(--deduction-color);
+        }
+
+        .title-and-total-container {
+            display: flex;
+            justify-content: space-between;
+            flex-grow: 1; 
+            align-items: center;
+        }
+
+        .sub-group-content {
+            padding: 15px 20px;
+            display: none;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px 20px;
+        }
+
+        .sub-group-content.visible {
+            display: grid;
+        }
+
+        /* Arrow styling and position */
+        .icon {
+            font-size: 1.2em;
+            transition: transform 0.3s;
+            margin-right: 10px; 
+        }
+        .sub-group-toggle.collapsed .icon {
+            transform: rotate(-90deg);
+        }
+        .sub-group-toggle:not(.collapsed) .icon {
+            transform: rotate(0deg); 
+        }
+
+        /* --- INPUTS & DISPLAY (Main Content) --- */
+        .input-group, .display-group { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 5px 0;
+            border-bottom: 1px dotted #ccc;
+            grid-column: 1 / -1; 
+        }
+        
+        label {
+            flex: 3;
+            padding-right: 15px;
+            font-size: 0.95em;
+        }
+
+        input[type="number"], select { 
+            flex: 2; 
+            padding: 8px 10px; 
+            border: 1px solid var(--border-color); 
+            border-radius: 5px; 
+            text-align: right; 
+            font-size: 1em;
+            background-color: var(--input-bg);
+        }
+
+        .display-group .value { 
+            flex: 2; 
+            text-align: right; 
+            font-weight: bold; 
+            background-color: #fcfcfc; 
+            padding: 8px 10px; 
+            border-radius: 5px;
+            border: 1px solid #f0f0f0;
+            color: #171717;
+        }
+
+        /* --- NET EARNINGS AREA (ALWAYS VISIBLE) --- */
+        .net-earnings-area {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #e6ffec; 
+            border: 2px solid var(--secondary-color);
+            border-radius: 10px;
+        }
+
+        .net-earnings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.3em;
+            color: var(--secondary-color);
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--secondary-color);
+            margin-bottom: 10px;
+        }
+
+        .net-earnings-header h2 {
+            margin: 0;
+            font-size: 1.2em;
+            color: var(--secondary-color);
+        }
+
+        .net-earnings-breakdown .display-group {
+            border-bottom: none;
+            padding: 8px 0;
+        }
+
+        /* --- RIGHT COLUMN (SIDEBAR) OPTIMIZATION --- */
+        .sidebar .input-group,
+        .sidebar .display-group {
+            padding: 8px 0;
+        }
+
+        .sidebar .input-group label,
+        .sidebar .display-group label {
+            /* Force labels to stay on one line and take max space */
+            flex: 1; 
+            white-space: nowrap; 
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding-right: 10px; 
+        }
+        
+        /* Adjusted width for inputs/selects in the sidebar */
+        .sidebar input[type="number"], 
+        .sidebar select,
+        .sidebar .display-group .value {
+            flex: 0 0 90px; 
+            padding: 4px 8px; 
+            font-size: 0.9em;
+        }
+
+        /* Tax Reference List/Table Styling */
+        .tax-ref-list {
+            margin-top: 20px; 
+            width: 100%;
+        }
+        .tax-ref-list .input-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px dotted #ccc;
+        }
+        .tax-ref-list .input-row:last-child {
+            border-bottom: none;
+        }
+        
+        .tax-ref-list .label-text {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding-right: 10px;
+            font-size: 0.95em;
+        }
+        
+        .tax-ref-list .input-field {
+            flex: 0 0 90px; 
+        }
+
+        /* --- FOOTER STYLES --- */
+        .page-footer {
+            margin-top: 50px;
+            padding: 15px;
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+
+<div class="calculator-container">
+    
+    <div class="main-content">
+        <h1>🇵🇱 SALARY CALCULATOR (PLN)</h1>
+        
+        <div class="collapsible-container">
+            <div class="main-total-header">
+                <span>💰 EARNINGS (GROSS)</span>
+                <span id="total-earnings-gross">0.00 PLN</span>
+            </div>
+            
+            <div class="sub-group">
+                <div class="sub-group-toggle collapsed" data-target="core-content">
+                    <span class="icon">▼</span>
+                    <div class="title-and-total-container">
+                        <span>CORE</span>
+                        <span id="total-core" class="value">0.00 PLN</span>
+                    </div>
+                </div>
+                <div class="sub-group-content" id="core-content">
+                    <div class="input-group"><label for="salary-gross">Salary (gross)</label><input type="number" id="salary-gross" value="19500" min="0"></div>
+                    <div class="input-group"><label for="luxmed-add">Luxmed Additional</label><input type="number" id="luxmed-add" value="72.46" min="0"></div>
+                    <div class="input-group"><label for="multisport-add">Multisport Additional</label><input type="number" id="multisport-add" value="77.60" min="0"></div>
+                    <div class="input-group"><label for="life-ins-add">Life Insurance Additional</label><input type="number" id="life-ins-add" value="66.81" min="0"></div>
+                    <div class="input-group"><label for="vacation-add">Vacation Additional</label><input type="number" id="vacation-add" value="0" min="0"></div>
+                    <div class="input-group" style="background-color: #e9f5ff; border-top: 1px dotted #ccc;"><label for="remote-work">Remote work (Non-Taxable)</label><input type="number" id="remote-work" value="0" min="0"></div>
+                </div>
+            </div>
+
+            <div class="sub-group">
+                <div class="sub-group-toggle collapsed" data-target="overtime-content">
+                    <span class="icon">▼</span>
+                    <div class="title-and-total-container">
+                        <span>OVERTIME</span>
+                        <span id="total-overtime" class="value">0.00 PLN</span>
+                    </div>
+                </div>
+                <div class="sub-group-content" id="overtime-content">
+                    <div class="input-group">
+                        <label for="ot-50-hours">Overtime 50% (hours)</label>
+                        <input type="number" id="ot-50-hours" value="0" min="0">
+                    </div>
+                    <div class="display-group">
+                        <label>Overtime 50% (amount)</label>
+                        <span class="value" id="ot-50-amount">0.00</span>
+                    </div>
+                    <div class="input-group">
+                        <label for="ot-100-hours">Overtime 100% (hours)</label>
+                        <input type="number" id="ot-100-hours" value="0" min="0">
+                    </div>
+                    <div class="display-group">
+                        <label>Overtime 100% (amount)</label>
+                        <span class="value" id="ot-100-amount">0.00</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sub-group">
+                <div class="sub-group-toggle collapsed" data-target="bonuses-content">
+                    <span class="icon">▼</span>
+                    <div class="title-and-total-container">
+                        <span>BONUSES</span>
+                        <span id="total-bonuses" class="value">0.00 PLN</span>
+                    </div>
+                </div>
+                <div class="sub-group-content" id="bonuses-content">
+                    <div class="display-group">
+                        <label>Quarterly bonus</label>
+                        <span class="value" id="quarterly-bonus">0.00</span>
+                    </div>
+                    <div class="input-group">
+                        <label for="extra-bonus">Extra bonus</label>
+                        <input type="number" id="extra-bonus" value="0" min="0">
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="collapsible-container">
+            <div class="main-total-header deductions-header" style="color: var(--deduction-color);">
+                <span>📉 DEDUCTIONS</span>
+                <span id="total-deductions">0.00 PLN</span>
+            </div>
+
+            <div class="sub-group">
+                <div class="sub-group-toggle collapsed deductions" data-target="zus-content">
+                    <span class="icon">▼</span>
+                    <div class="title-and-total-container">
+                        <span>ZUS (Social & Health)</span>
+                        <span id="total-zus-deductions" class="value">0.00 PLN</span>
+                    </div>
+                </div>
+                <div class="sub-group-content" id="zus-content">
+                    <div class="display-group"><label>Retirement Pension (9.76%)</label><span class="value" id="zus-retirement">0.00</span></div>
+                    <div class="display-group"><label>Disability Pension (1.50%)</label><span class="value" id="zus-disability">0.00</span></div>
+                    <div class="display-group"><label>Sickness (2.45%)</label><span class="value" id="zus-sickness">0.00</span></div>
+                    <div class="display-group"><label>Health Care (Collected 9.00%)</label><span class="value" id="zus-health-collected">0.00</span></div>
+                </div>
+            </div>
+
+            <div class="sub-group">
+                <div class="sub-group-toggle collapsed deductions" data-target="pit-content">
+                    <span class="icon">▼</span>
+                    <div class="title-and-total-container">
+                        <span>PIT (Income Tax)</span>
+                        <span id="total-pit" class="value">0.00 PLN</span>
+                    </div>
+                </div>
+                <div class="sub-group-content" id="pit-content">
+                    <div class="display-group"><label>Income Tax (Gross, 12%)</label><span class="value" id="pit-gross-before-deductible">0.00</span></div>
+                    <div class="display-group"><label>Income Tax (Net, Final Advance)</label><span class="value" id="pit-net">0.00</span></div>
+                </div>
+            </div>
+
+            <div class="sub-group">
+                <div class="sub-group-toggle collapsed deductions" data-target="voluntary-content">
+                    <span class="icon">▼</span>
+                    <div class="title-and-total-container">
+                        <span>VOLUNTARY</span>
+                        <span id="total-voluntary" class="value">0.00 PLN</span>
+                    </div>
+                </div>
+                <div class="sub-group-content" id="voluntary-content">
+                    <div class="display-group"><label>PPK Employee (from References)</label><span class="value" id="ppk-employee-contribution">0.00</span></div>
+                    <div class="input-group"><label for="luxmed-family">Luxmed Family</label><input type="number" id="luxmed-family" value="482.61" min="0"></div>
+                    <div class="input-group"><label for="luxmed-employee">Luxmed Employee</label><input type="number" id="luxmed-employee" value="72.46" min="0"></div>
+                    <div class="input-group"><label for="multisport-employee">Multisport Employee</label><input type="number" id="multisport-employee" value="98.41" min="0"></div>
+                    <div class="input-group"><label for="multisport-partner">Multisport Partner</label><input type="number" id="multisport-partner" value="0" min="0"></div>
+                    <div class="input-group"><label for="multisport-kids">Multisport KIDS</label><input type="number" id="multisport-kids" value="0" min="0"></div>
+                    <div class="input-group"><label for="life-ins-employee">Life Insurance Employee</label><input type="number" id="life-ins-employee" value="66.81" min="0"></div>
+                    <div class="input-group"><label for="life-ins-partner">Life Insurance Partner</label><input type="number" id="life-ins-partner" value="28" min="0"></div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="net-earnings-area">
+            <div class="net-earnings-header">
+                <h2>💸 EARNINGS (NET)</h2>
+                <span id="salary-net-total" style="font-size: 1.3em;">0.00 PLN</span>
+            </div>
+            
+            <div class="net-earnings-breakdown">
+                <div class="display-group"><label>Salary (net)</label><span class="value" id="net-salary-base">0.00</span></div>
+                <div class="display-group"><label>Overtime (net)</label><span class="value" id="net-overtime">0.00</span></div>
+                <div class="display-group"><label>Bonuses (net)</label><span class="value" id="net-bonuses">0.00</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <h2>🗓️ MONTH & WORK DAYS</h2>
+        
+        <div class="input-group">
+            <label for="month-select">Month/Year</label>
+            <select id="month-select" style="flex: 0 0 90px;"></select>
+        </div>
+        
+        <div class="input-group">
+            <label for="working-days-input">Working Days (M-F, excl. holidays)</label>
+            <input type="number" id="working-days-input" value="20" min="1" style="flex: 0 0 90px;">
+        </div>
+        
+        <div class="input-group">
+            <label for="days-off">Days off (Illness, etc.)</label>
+            <input type="number" id="days-off" value="0" min="0" style="flex: 0 0 90px;">
+        </div>
+        <div class="display-group"><label>Days worked</label><span class="value" id="days-worked">20</span></div>
+        <div class="note">Working Days are now **manually adjustable**.</div>
+        
+        <h2 style="margin-top: 25px;">✍️ COPYRIGHTS</h2>
+        <div class="input-group">
+            <label for="copyright-rate">Rate (%)</label>
+            <input type="number" id="copyright-rate" value="90" min="0" max="100" style="flex: 0 0 90px;">
+        </div>
+        <div class="display-group"><label>Base salary covered by copyrights</label><span class="value" id="salary-copyright-base-ref">0.00</span></div>
+        <div class="display-group"><label>Base income not covered by copyrights</label><span class="value" id="salary-non-copyright-base-ref">0.00</span></div>
+
+        
+        <h2 style="margin-top: 25px;">📊 CONTRIBUTION BASES</h2>
+        <div class="display-group"><label>ZUS Base (Gross Income)</label><span class="value" id="sidebar-zus-base">0.00</span></div>
+        <div class="display-group"><label>Health Care Base (NFZ)</label><span class="value" id="sidebar-health-base">0.00</span></div>
+        
+        <h2 style="margin-top: 25px;">🧠 TAX BASE CALCULATION</h2>
+        <div class="display-group"><label>PPK Employer Contribution</label><span class="value" id="sidebar-ppk-employer">0.00</span></div> 
+        <div class="display-group"><label>Tax Base Covered by Copyrights</label><span class="value" id="tax-base-covered">0.00</span></div>
+        <div class="display-group"><label>Tax Base NOT Covered by Copyrights</label><span class="value" id="tax-base-not-covered">0.00</span></div>
+        <div class="display-group" style="border-top: 2px dashed #0056b3;"><label>Total Tax Base</label><span class="value" id="tax-base-total-final">0.00</span></div>
+
+
+        <h2 style="margin-top: 25px;">⚖️ TAX REFERENCES (EDITABLE)</h2>
+        <div class="tax-ref-list">
+            <div class="input-row">
+                <span class="label-text">Retirement Pension (%)</span>
+                <input type="number" step="0.01" value="9.76" data-rate="retirement" class="input-field">
+            </div>
+            <div class="input-row">
+                <span class="label-text">Disability Pension (%)</span>
+                <input type="number" step="0.01" value="1.50" data-rate="disability" class="input-field">
+            </div>
+            <div class="input-row">
+                <span class="label-text">Sickness (%)</span>
+                <input type="number" step="0.01" value="2.45" data-rate="sickness" class="input-field">
+            </div>
+            <div class="input-row">
+                <span class="label-text">Health Care Collected (%)</span>
+                <input type="number" step="0.01" value="9.00" data-rate="health_collected" class="input-field">
+            </div>
+            <div class="input-row">
+                <span class="label-text">Health Care Deductible (7.75%)</span>
+                <input type="number" step="0.01" value="7.75" data-rate="health_deductible_rate" class="input-field">
+            </div>
+            <div class="input-row">
+                <span class="label-text">PIT (Income Tax) Rate (%)</span>
+                <input type="number" step="1" value="12.00" data-rate="pit" class="input-field">
+            </div>
+            <div class="input-row">
+                <span class="label-text">PPK Employee Rate (%)</span>
+                <input type="number" step="0.01" value="2.00" data-rate="ppk_employee" class="input-field">
+            </div>
+            <div class="input-row">
+                <span class="label-text">PPK Employer Rate (%)</span>
+                <input type="number" step="0.01" value="1.50" data-rate="ppk_employer" class="input-field">
+            </div>
+            <div class="input-row">
+                <span class="label-text">Tax Deductible Cost (PLN)</span>
+                <input type="number" step="1" value="300.00" data-rate="tax_deductible_cost" class="input-field">
+            </div>
+            <div class="input-row">
+                <span class="label-text">Tax Relief (PLN)</span>
+                <input type="number" step="1" value="300.00" data-rate="tax_relief" class="input-field">
+            </div>
+        </div>
+        
+    </div>
+
+</div>
+
+<footer class="page-footer">
+    <small>©2025 All rights reserved</small>
+</footer>
+
+<script>
+    // Global object to store editable rates
+    let RATES = {
+        retirement: 0.0976,
+        disability: 0.0150,
+        sickness: 0.0245,
+        health_collected: 0.0900,
+        pit: 0.12,
+        ppk_employee: 0.02,
+        ppk_employer: 0.015,
+        tax_deductible_cost: 300.00, 
+        tax_relief: 300.00 
+    };
+
+    const INPUT_SELECTORS = [
+        '#salary-gross', '#luxmed-add', '#multisport-add', '#life-ins-add', '#vacation-add', '#remote-work', 
+        '#ot-50-hours', '#ot-100-hours', '#extra-bonus',
+        '#luxmed-family', '#luxmed-employee', '#multisport-employee',
+        '#multisport-partner', '#multisport-kids', '#life-ins-employee',
+        '#life-ins-partner',
+        '#month-select', '#days-off', '#working-days-input', '#copyright-rate', '.sidebar input[type="number"]'
+    ];
+
+    // --- HELPER FUNCTIONS ---
+    function toFixed(num, fixed = 2) {
+        // Ensures the displayed value is rounded to the specific decimal places
+        return parseFloat(num).toFixed(fixed);
+    }
+    
+    // Rounds down to the nearest grosz (0.01 PLN) - Used for Disability, PPK, and Health Base
+    function floorToTwo(num) {
+        return Math.floor(num * 100) / 100;
+    }
+    
+    // Rounds up to the nearest grosz (0.01 PLN) - Used for Retirement and Sickness
+    function roundUpToTwo(num) {
+        return Math.ceil(num * 100) / 100;
+    }
+
+    function getInputValue(id) {
+        return parseFloat(document.querySelector(id).value) || 0;
+    }
+
+    function setDisplayValue(id, value) {
+        document.querySelector(id).textContent = toFixed(value);
+    }
+    
+    // Function to populate the month/year dropdown
+    function populateMonthSelect() {
+        const select = document.getElementById('month-select');
+        // Current context is December 2025
+        const currentContextYear = 2025;
+        const currentContextMonth = 11; 
+
+        // Set the default working days for December 2025 
+        document.getElementById('working-days-input').value = 20;
+
+        // Show 6 months before and 12 months after the context month
+        for (let y = currentContextYear - 1; y <= currentContextYear + 1; y++) {
+            let startMonth = 0;
+            let endMonth = 11;
+            
+            if (y === currentContextYear - 1) {
+                startMonth = Math.max(0, currentContextMonth - 6);
+            }
+            if (y === currentContextYear + 1) {
+                endMonth = Math.min(11, currentContextMonth + 5);
+            }
+
+            for (let m = startMonth; m <= endMonth; m++) {
+                
+                if (y === currentContextYear - 1 && m < currentContextMonth - 6) continue;
+                if (y === currentContextYear + 1 && m > currentContextMonth + 5) break; 
+
+
+                const date = new Date(y, m, 1);
+                const monthName = date.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+                const option = document.createElement('option');
+                option.value = (y * 100) + m;
+                option.textContent = monthName;
+                if (y === currentContextYear && m === currentContextMonth) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            }
+        }
+    }
+
+    // --- CORE CALCULATION LOGIC ---
+    function calculateSalary() {
+        // 0. UPDATE RATES from editable inputs
+        document.querySelectorAll('.sidebar input[data-rate]').forEach(input => {
+            const key = input.dataset.rate;
+            const value = parseFloat(input.value) || 0;
+            
+            if (key.includes('cost') || key.includes('relief')) {
+                RATES[key] = value; // Amount (PLN)
+            } else {
+                RATES[key] = value / 100; // Percentage to decimal
+            }
+        });
+
+        // 1. INPUTS & DYNAMIC WORK DAYS
+        const salaryGross = getInputValue('#salary-gross');
+        const luxmedAdd = getInputValue('#luxmed-add');
+        const multisportAdd = getInputValue('#multisport-add');
+        const lifeInsAdd = getInputValue('#life-ins-add'); 
+        const vacationAdd = getInputValue('#vacation-add'); 
+        const remoteWork = getInputValue('#remote-work'); 
+        const ot50Hours = getInputValue('#ot-50-hours');
+        const ot100Hours = getInputValue('#ot-100-hours');
+        const extraBonus = getInputValue('#extra-bonus');
+        const daysOff = getInputValue('#days-off');
+        const copyrightRate = getInputValue('#copyright-rate') / 100;
+        
+        // Use the user-provided working days input
+        const calculatedWorkingDays = getInputValue('#working-days-input');
+        const daysWorked = calculatedWorkingDays - daysOff;
+        setDisplayValue('#days-worked', daysWorked);
+
+        // 2. CORE EARNINGS & BONUSES
+        const coreBase = salaryGross + luxmedAdd + multisportAdd + lifeInsAdd + vacationAdd;
+        document.getElementById('total-core').textContent = toFixed(coreBase) + " PLN"; 
+        
+        // Calculate OT amount 
+        const hourlyRate = daysWorked > 0 ? (salaryGross / calculatedWorkingDays / 8) : 0; 
+        const ot50Amount = ot50Hours * hourlyRate * 1.5;
+        const ot100Amount = ot100Hours * hourlyRate * 2.0;
+        const overtimeTotal = ot50Amount + ot100Amount;
+        setDisplayValue('#ot-50-amount', ot50Amount);
+        setDisplayValue('#ot-100-amount', ot100Amount);
+        document.getElementById('total-overtime').textContent = toFixed(overtimeTotal) + " PLN";
+        
+        let quarterlyBonus = 0;
+        const monthSelectValue = getInputValue('#month-select');
+        const selectedMonthIndex = monthSelectValue % 100;
+        const selectedYear = Math.floor(monthSelectValue / 100);
+
+        const isQuarterEnd = [2, 5, 8, 11].includes(selectedMonthIndex); 
+        const dateKey = selectedYear * 100 + selectedMonthIndex;
+        
+        // Bonus Logic
+        if (dateKey >= 202602) { 
+             if (isQuarterEnd) quarterlyBonus = 11250;
+        } else if (dateKey >= 202511) { 
+             if (selectedMonthIndex === 11) quarterlyBonus = 3750;
+        }
+        
+        const bonusesTotal = quarterlyBonus + extraBonus;
+        setDisplayValue('#quarterly-bonus', quarterlyBonus);
+        document.getElementById('total-bonuses').textContent = toFixed(bonusesTotal) + " PLN";
+
+        // EARNINGS (GROSS) TOTAL: earningsGross = sum( core total + overtime total + bonuses)
+        const totalGross = coreBase + overtimeTotal + bonusesTotal;
+        document.getElementById('total-earnings-gross').textContent = toFixed(totalGross) + " PLN"; 
+
+        
+        // --- 3. CONTRIBUTION BASES (Using Gross Earnings) ---
+        
+        // ZUS Base (Gross Income): zusBase = earningsGross
+        const zusBase = totalGross;
+        setDisplayValue('#sidebar-zus-base', zusBase);
+        
+        // ZUS CONTRIBUTIONS (Employee share)
+        const zusRetirement = roundUpToTwo(zusBase * RATES.retirement); 
+        const zusDisability = floorToTwo(zusBase * RATES.disability); 
+        const zusSickness = roundUpToTwo(zusBase * RATES.sickness); 
+        const totalZusContributions = zusRetirement + zusDisability + zusSickness; 
+        
+        setDisplayValue('#zus-retirement', zusRetirement);
+        setDisplayValue('#zus-disability', zusDisability);
+        setDisplayValue('#zus-sickness', zusSickness);
+
+        // Health Care Base (NFZ): nfzHeealthCare = zusBase - (total ZUS employee contributions)
+        const healthBase = zusBase - totalZusContributions; 
+        setDisplayValue('#sidebar-health-base', healthBase);
+        
+        // Health Care Deduction (Collected 9.00%)
+        const zusHealthCollected = floorToTwo(healthBase * RATES.health_collected); 
+        setDisplayValue('#zus-health-collected', zusHealthCollected);
+            
+        const fullZusDeductionsForNet = totalZusContributions + zusHealthCollected;
+        
+        // --- ZUS HEADER TOTAL DISPLAY (UPDATED LOGIC) ---
+        // ZUS (Social & Health) total = Retirement + Disability + Sickness + Health Care Collected (9%)
+        const zusHeaderTotal = zusRetirement + zusDisability + zusSickness + zusHealthCollected;
+        document.getElementById('total-zus-deductions').textContent = toFixed(zusHeaderTotal) + " PLN";
+
+
+        // PPK Employer Contribution: ppkEmployer = earningsGross * PPK Employer Rate
+        const ppkEmployer = floorToTwo(zusBase * RATES.ppk_employer); 
+        setDisplayValue('#sidebar-ppk-employer', ppkEmployer); 
+        
+        // PPK Employee Contribution: ppkEmployee = earningsGross * PPK Employee Rate
+        const ppkEmployee = floorToTwo(zusBase * RATES.ppk_employee); 
+        setDisplayValue('#ppk-employee-contribution', ppkEmployee);
+
+
+        // --- 4. TAX BASE SPLIT CALCULATION (Per User's Formulas) ---
+        
+        // Base salary covered by copyrights: copyrigthsCoveredBase = Salary (gross) * copyrights (90%)
+        const copyrightsCoveredBase = salaryGross * copyrightRate; 
+        setDisplayValue('#salary-copyright-base-ref', copyrightsCoveredBase); 
+        
+        // Base salary NOT covered by copyrights: copyrightsNotCoveredBase = earningsGross - copyrigthsCoveredBase - Remote work
+        const copyrightsNotCoveredBase = totalGross - copyrightsCoveredBase; 
+        setDisplayValue('#salary-non-copyright-base-ref', copyrightsNotCoveredBase); 
+
+        // ZUS attributable to covered and non-covered bases (using the same ZUS rates)
+        const zusCovered = roundUpToTwo(copyrightsCoveredBase * RATES.retirement) 
+                         + roundUpToTwo(copyrightsCoveredBase * RATES.disability) 
+                         + roundUpToTwo(copyrightsCoveredBase * RATES.sickness); 
+
+        const zusNotCovered = roundUpToTwo(copyrightsNotCoveredBase * RATES.retirement) 
+                            + floorToTwo(copyrightsNotCoveredBase * RATES.disability) 
+                            + roundUpToTwo(copyrightsNotCoveredBase * RATES.sickness);
+
+
+        // Tax base covered by copyrights: taxBaseCopyrightsCovered = (copyrightsCoveredBase - ZUS_Covered)*0.5
+        const taxBaseCopyrightsCovered = floorToTwo((copyrightsCoveredBase - zusCovered) * 0.5); 
+        setDisplayValue('#tax-base-covered', taxBaseCopyrightsCovered); 
+        
+        
+        // Tax base NOT covered by copyrights: taxBaseNotCopyrightsCovered = copyrightsNotCoveredBase - ZUS_NotCovered
+        const taxBaseNotCopyrightsCovered = floorToTwo(copyrightsNotCoveredBase - zusNotCovered - RATES.tax_deductible_cost);
+        setDisplayValue('#tax-base-not-covered', taxBaseNotCopyrightsCovered);
+        
+
+        // Tax Base: taxBase = taxBaseCopyrightsCovered + taxBaseNotCopyrightsCovered 
+        const taxBase = taxBaseCopyrightsCovered + taxBaseNotCopyrightsCovered + ppkEmployer;
+        
+        document.getElementById('tax-base-total-final').textContent = toFixed(taxBase);
+
+
+        // 5. PIT CALCULATION
+        
+        // Apply Tax Deductible Cost to the Tax Base before calculating gross tax
+        const adjustedTaxBase = Math.max(0, taxBase);
+        
+        // Income Tax (Gross): incomeTaxGross = round((pitTaxBasisTotal - tax_deductible_cost) * PIT Rate, 0)
+        const incomeTaxGross = Math.round(adjustedTaxBase * RATES.pit); 
+        
+        setDisplayValue('#pit-gross-before-deductible', incomeTaxGross);
+        
+        // PIT NET ADVANCE CALCULATION: Gross Tax - Tax Relief
+        const taxReliefAmount = RATES.tax_relief;
+        const pitNet = Math.max(0, incomeTaxGross - taxReliefAmount);
+        
+        setDisplayValue('#pit-net', pitNet);
+        
+        // PIT Header Total Display (Now showing the final calculated pitNet)
+        const totalPitDeduction = pitNet; 
+        document.getElementById('total-pit').textContent = toFixed(totalPitDeduction) + " PLN";
+
+        // 6. VOLUNTARY DEDUCTIONS
+        const luxmedFamily = getInputValue('#luxmed-family');
+        const luxmedEmployee = getInputValue('#luxmed-employee');
+        const multisportEmployee = getInputValue('#multisport-employee');
+        const multisportPartner = getInputValue('#multisport-partner');
+        const multisportKids = getInputValue('#multisport-kids');
+        const lifeInsEmployee = getInputValue('#life-ins-employee');
+        const lifeInsPartner = getInputValue('#life-ins-partner');
+
+        const totalVoluntary = ppkEmployee + luxmedFamily + luxmedEmployee + multisportEmployee + multisportPartner + multisportKids + lifeInsEmployee + lifeInsPartner; 
+        document.getElementById('total-voluntary').textContent = toFixed(totalVoluntary) + " PLN";
+
+        // 7. TOTAL DEDUCTIONS
+        // IMPORTANT: The final net salary calculation must use the *full* ZUS deduction (fullZusDeductionsForNet)
+        const totalDeductions = fullZusDeductionsForNet + totalPitDeduction + totalVoluntary; 
+        document.getElementById('total-deductions').textContent = toFixed(totalDeductions) + " PLN";
+        
+        // 8. NET EARNINGS
+        const netSalaryFinal = totalGross - totalDeductions; 
+        document.getElementById('salary-net-total').textContent = toFixed(netSalaryFinal) + " PLN";
+
+        // Net Split (Approximate based on Gross Proportions)
+        const taxableGross = coreBase + overtimeTotal + bonusesTotal; 
+        const taxableNet = netSalaryFinal; 
+
+        let netOvertimeCalc = 0;
+        let netBonusesCalc = 0;
+        let netSalaryBaseCalc = 0;
+
+        if (taxableGross > 0) {
+            const netOvertimeRatio = overtimeTotal / taxableGross;
+            const netBonusesRatio = bonusesTotal / taxableGross;
+            const netCoreRatio = (coreBase) / taxableGross; 
+            
+            netOvertimeCalc = taxableNet * netOvertimeRatio;
+            netBonusesCalc = taxableNet * netBonusesRatio;
+            netSalaryBaseCalc = taxableNet * netCoreRatio;
+        } else {
+            netSalaryBaseCalc = netSalaryFinal;
+        }
+
+        setDisplayValue('#net-salary-base', netSalaryBaseCalc + remoteWork);
+        setDisplayValue('#net-overtime', netOvertimeCalc);
+        setDisplayValue('#net-bonuses', netBonusesCalc);
+    }
+
+    // --- COLLAPSIBLE LOGIC ---
+    function setupCollapsible() {
+        document.querySelectorAll('.sub-group-toggle').forEach(toggle => {
+            const targetId = toggle.dataset.target;
+            const targetContent = document.getElementById(targetId);
+            
+            toggle.addEventListener('click', () => {
+                if (targetContent) {
+                    toggle.classList.toggle('collapsed');
+                    targetContent.classList.toggle('visible');
+                }
+            });
+            
+            // Collapse all by default on load
+            if (targetContent) {
+                toggle.classList.add('collapsed');
+                targetContent.classList.remove('visible');
+            }
+        });
+    }
+
+    // --- INITIALIZATION ---
+    function setupEventListeners() {
+        populateMonthSelect();
+        setupCollapsible();
+        
+        // Listen for changes in all relevant inputs, including the sidebar tax reference inputs
+        document.querySelectorAll(INPUT_SELECTORS.join(', ')).forEach(element => {
+            if (element) {
+                element.addEventListener('input', calculateSalary);
+            }
+        });
+
+        // Run calculation immediately
+        calculateSalary();
+    }
+
+    document.addEventListener('DOMContentLoaded', setupEventListeners);
+</script>
+</body>
+</html>
